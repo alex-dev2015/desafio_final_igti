@@ -2,6 +2,8 @@ const { request, response } = require('express');
 const express = require('express');
 const transactionRouter = express.Router();
 
+const service = require('../services/transactionService')
+
 
 transactionRouter.get('/', async(request, response) => {
     const { query } = request;
@@ -12,7 +14,15 @@ transactionRouter.get('/', async(request, response) => {
                 `É necessário informar o parâmetro "period", cujo valor deve estar no formato yyyy-mm`
             )
         }
-        response.send({length: 2, transactions: ['transaction1', 'transaction2'],})
+
+        const { period } = query;
+
+        const filteredTransactions = await service.getTransactionsFrom(period);
+
+        response.send({
+                length: filteredTransactions.length, 
+                transactions: filteredTransactions ,
+            })
     } catch ({message}) {
         console.log(message);
         response.status(400).send({error:message});
@@ -25,7 +35,26 @@ transactionRouter.post('/', async(request, response) => {
         if (JSON.stringify(body) === '{}') {
             throw new Error(`Conteúdo inexistente`)
         }
-        response.send({status: 'Ok'});
+
+        const { description, value, category, year, month, day, type } = body;
+        const yearMonth     = `${year}-${month.toString().padStart(2, '0')}`;
+        const yearMonthDay  = `${yearMonth}-${day.toString().padStart(2, '0')}`;
+
+        const postTransaction = {
+            description,
+            value,
+            category,
+            year,
+            month,
+            day,
+            yearMonth,
+            yearMonthDay,
+            type,
+        }
+
+      const newTransaction = await service.postTransaction(postTransaction);
+
+        response.send({status: 'Ok', transaction: newTransaction});
     } catch ({message}) {
         console.log(message);
         response.status(400).send({error:message});
@@ -52,7 +81,30 @@ transactionRouter.put('/:id', async(request, response) => {
             if (JSON.stringify(body) === '{}') {
             throw new Error(`Conteúdo inexistente`)
         }
-        response.send({status: 'Ok'});
+
+        const { description, value, category, year, month, day, type } = body;
+        const { id } = params;
+        const yearMonth     = `${year}-${month.toString().padStart(2, '0')}`;
+        const yearMonthDay  = `${yearMonth}-${day.toString().padStart(2, '0')}`;
+
+        const updateTransaction = {
+            description,
+            value,
+            category,
+            year,
+            month,
+            day,
+            yearMonth,
+            yearMonthDay,
+            type,   
+        }
+
+      const updatedTransaction = await service.updateTransaction(id, updateTransaction);
+
+        response.send({
+            status: 'Ok',
+            transaction: updatedTransaction,
+    });
     } catch ({message}) {
         console.log(message);
         response.status(400).send({error:message});
@@ -76,7 +128,20 @@ transactionRouter.delete('/:id', async(request, response) => {
 
     try {
 
-        response.send({status: 'Ok'});
+        const { id } = params;
+
+        const didDelete = await service.deleteTransaction(id);
+
+        if (didDelete) {
+            response.send({
+                status: 'Ok',
+                message: `Exclusão do id ${id} feita com sucesso!`,
+            });
+            
+        }else{
+            throw new Error(`Erro ao excluir!`);
+        }
+
     } catch ({message}) {
         console.log(message);
         response.status(400).send({error:message});

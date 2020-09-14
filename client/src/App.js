@@ -53,17 +53,26 @@ export default function App() {
 
 
   const [transactions, setTransactions] = useState([])
+  const [revenues, setRevenues] = useState(0);
+  const [expenses, setExpenses] = useState(0);
+  const [balance , setBalance ] = useState(0);
+  const [releases, setReleases] = useState(0);
   const [filteredTransactions, setFilteredTransactions] = useState([])
   const [currentPeriod, setCurrentPeriod] = useState(PERIODS[0])
   const [currentScreen, setCurrentScreen] = useState(LIST_SCREEN)
   const [filteredText, setFilteredText] = useState('');
-  const [selectedTransaction, setSelectedTransaction] = useState(null)
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [newTransaction, setNewTransaction] = useState(false)
 
   useEffect(() => {
     const fetchTransactions = async () =>{
       const { data } = await api.get(`/transaction?period=${currentPeriod}`);
       
       setTransactions(data.transactions);
+      setRevenues(data.totalRevenues);
+      setExpenses(data.totalExpenses);
+      setBalance(data.balance);
+      setReleases(data.length);
       
     }
 
@@ -77,18 +86,44 @@ export default function App() {
         newFilteredTransactions = newFilteredTransactions.filter((transaction) =>{
           return transaction.description.toLowerCase().includes(filteredText)
         })
+
+        
       }
+
+
+      let newRevenues = newFilteredTransactions.filter(item => {
+        return item.type === '+'
+        }).reduce((accumulator, current) => {
+            return accumulator + current.value;
+        },0);
+
+      let newExpenses = newFilteredTransactions.filter(item => {
+        return item.type === '-'
+        }).reduce((accumulator, current) => {
+            return accumulator + current.value;
+        },0);
+
+      let newBalance = newRevenues - newExpenses;
+
+
+
+      
+    
+    setReleases(newFilteredTransactions.length)
+    setRevenues(newRevenues);
+    setExpenses(newExpenses);
+    setBalance(newBalance)    
     setFilteredTransactions(newFilteredTransactions)
-  },[transactions, filteredText]);
+  },[transactions, filteredText, revenues,expenses,balance, releases]);
 
   useEffect(() =>{
     
-    const newScreen = selectedTransaction !== null ? MAINTENANCE_SCREEN : LIST_SCREEN
+    const newScreen = (selectedTransaction !== null  || newTransaction) ? MAINTENANCE_SCREEN : LIST_SCREEN
 
     
     setCurrentScreen(newScreen);
 
-  }, [selectedTransaction])
+  }, [selectedTransaction, newTransaction])
 
  
   const  handlePeriodChange = (event) => {
@@ -126,6 +161,65 @@ export default function App() {
     setFilteredText(text.toLowerCase());  
  }
 
+ const handleCancelMaintenance = () => {
+   setNewTransaction(false)
+   setSelectedTransaction(null)
+ 
+  }
+ const handleSaveMaintenance = async (newTransaction) => {
+   
+   const { _id } = newTransaction;
+
+   if (!_id) {
+      
+    const insertedTransaction = {
+      ...newTransaction,
+      year:  Number(newTransaction.yearMonthDay.substring(0, 4)) ,
+      month: Number(newTransaction.yearMonthDay.substring(5, 7)) ,
+      day:   Number(newTransaction.yearMonthDay.substring(8, 10)) ,
+    }
+ 
+    const  { data } = await api.post(`/transaction/`, insertedTransaction);
+
+    const newTransactions = [...transactions, data.transaction];
+
+    newTransactions.sort((a,b) => {
+      a.yearMonthDay.localeCompare(b.yearMonthDay)
+    })
+
+    
+    setTransactions(newTransactions);
+    setNewTransaction(false)
+
+   }else{
+
+     const editedTransaction = {
+       ...newTransaction,
+       year:  Number(newTransaction.yearMonthDay.substring(0, 4)) ,
+       month: Number(newTransaction.yearMonthDay.substring(5, 7)) ,
+       day:   Number(newTransaction.yearMonthDay.substring(8, 10)) ,
+     }
+  
+     await api.put(`/transaction/${_id}`, editedTransaction);
+
+    const newTransactions = [...transactions];
+    const index = newTransactions.findIndex(transaction => {
+     return transaction._id === editedTransaction._id
+   });
+
+   newTransactions[index] = editedTransaction;
+   
+     setTransactions(newTransactions);
+     setSelectedTransaction(null)
+    }
+   
+
+ }
+
+  const handleNewTransaction = async () => {
+    setNewTransaction(true);
+  }
+
  
   return (
       <div className='container'>
@@ -143,10 +237,17 @@ export default function App() {
       onPeriodChange={handlePeriodChange}
       onCurrentPeriod={currentPeriod}
       onEditTransaction={handleEditTransaction}
+      onNewTransaction={handleNewTransaction}
+      onRevenues={revenues}
+      onExpenses={expenses}
+      onBalance={balance}
+      onReleases={releases}
     />
 
   : <MaintenanceScreen
       transaction={selectedTransaction}
+      onCancel={handleCancelMaintenance}
+      onSave={handleSaveMaintenance}
     />
   }
           

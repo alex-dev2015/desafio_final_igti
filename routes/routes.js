@@ -19,8 +19,30 @@ transactionRouter.get('/', async(request, response) => {
 
         const filteredTransactions = await service.getTransactionsFrom(period);
 
+        // const totalTransactions = filteredTransactions.reduce((accumulator, current) => {
+            
+        //     return accumulator + current.value;
+        // },0);
+
+        const revenues = filteredTransactions.filter(item => {
+            return item.type === '+'
+        }).reduce((accumulator, current) => {
+            return accumulator + current.value;
+        },0);
+
+        const expenses = filteredTransactions.filter(item => {
+            return item.type === '-'
+        }).reduce((accumulator, current) => {
+            return accumulator + current.value;
+        },0);
+
+                
+        
         response.send({
-                length: filteredTransactions.length, 
+                length: filteredTransactions.length,
+                totalRevenues: revenues,
+                totalExpenses: expenses,
+                balance: revenues - expenses,
                 transactions: filteredTransactions ,
             })
     } catch ({message}) {

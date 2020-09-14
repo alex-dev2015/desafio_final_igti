@@ -11,10 +11,15 @@ export default function ListScreen({
           onDeleteTransaction,
           onPeriodChange,
           onCurrentPeriod,
-          onEditTransaction
+          onEditTransaction,
+          onNewTransaction ,
+          onRevenues,
+          onExpenses,
+          onBalance ,
+          onReleases
  }) {
 
-  const { transactionStyle, butttonAction } = styles;
+  const { transactionStyle, butttonAction, painelResume } = styles;
   return (
     <>
     <select 
@@ -27,6 +32,28 @@ export default function ListScreen({
     })}
   </select>
 
+    <div style={painelResume}>
+      
+      <div className="chip">
+        <strong>Lançamentos: </strong>
+        { onReleases }
+      
+      </div>
+      <div className="chip">
+        <strong>Receitas: </strong>
+        { onRevenues }
+      </div>
+      <div className="chip">
+        <strong>Despesas: </strong>
+        { onExpenses }
+      </div>
+      <div className="chip">
+        <strong>Saldo: </strong>
+        { onBalance }
+      </div>
+      
+    </div>
+
 
     <input 
       type='text' 
@@ -34,6 +61,13 @@ export default function ListScreen({
       value={filteredText}
       onChange={onFilterdText}
     />
+
+    <button 
+      className='waves-effect waves-light btn' 
+      onClick={onNewTransaction}
+    >
+      Novo Lançamento
+    </button>
 
   {
     transactions.map((item) => {
@@ -56,7 +90,7 @@ export default function ListScreen({
               onClick={onDeleteTransaction}
               id={item._id}
             >
-              Ecluir
+              Excluir
             </button>
           </span>
           <span>
@@ -86,5 +120,13 @@ const styles = {
     marginRight: '10px',
     alignContent: 'right',
     
+  },
+  painelResume:{
+    padding: '10px',
+    margin: '10px',
+    border: '1px solid lightgray',
+    borderRadius: '5px',
+    marginLeft: '10px',
+    alignItems: 'center'
   }
 }
